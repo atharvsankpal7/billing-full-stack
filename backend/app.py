@@ -4,8 +4,8 @@ Flask Application for Smart Stock Prediction System
 
 from flask import Flask
 from flask_cors import CORS
-from .database import init_db
-from .routes import products_bp, sales_bp, receipts_bp, barcode_bp
+from database import init_db
+from routes import products_bp, sales_bp, receipts_bp, barcode_bp
 
 app = Flask(__name__)
 CORS(app)

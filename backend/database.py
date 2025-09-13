@@ -49,6 +49,10 @@ def init_db():
             total_amount REAL NOT NULL,
             payment_method TEXT NOT NULL,
             payment_status TEXT NOT NULL,
+            customer_name TEXT DEFAULT 'Customer',
+            customer_phone TEXT DEFAULT '',
+            amount_paid REAL NOT NULL,
+            change_amount REAL DEFAULT 0,
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')

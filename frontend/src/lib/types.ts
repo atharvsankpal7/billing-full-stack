@@ -18,13 +18,25 @@ export interface Sale {
   timestamp: string;
 }
 
-export interface Receipt {
+export interface ReceiptItem {
+  name: string;
+  quantity: number;
+  price: number;
+  subtotal: number;
+}
+
+export interface ReceiptI  {
+  id: number;
   receipt_id: string;
-  items: CartItem[];
-  total_amount: number;
+  items: ReceiptItem[];
+  total: number;  // Maps from total_amount
   payment_method: string;
   payment_status: string;
-  timestamp: string;
+  customer_name: string;
+  customer_phone: string;
+  amount_paid: number;
+  change: number;  // Maps from change_amount
+  created_at: string;  // Maps from timestamp
 }
 
 export interface PaymentResult {

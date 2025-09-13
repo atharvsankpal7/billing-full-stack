@@ -3,7 +3,7 @@ Barcode scanning API routes
 """
 
 from flask import Blueprint, request, jsonify
-from ..database import get_db_connection
+from database import get_db_connection
 import base64
 import cv2
 import numpy as np

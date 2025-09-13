@@ -3,7 +3,7 @@ Products API routes
 """
 
 from flask import Blueprint, request, jsonify
-from ..database import get_db_connection
+from database import get_db_connection
 
 products_bp = Blueprint('products', __name__)
 

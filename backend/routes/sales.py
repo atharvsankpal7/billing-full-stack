@@ -3,7 +3,7 @@ Sales API routes
 """
 
 from flask import Blueprint, request, jsonify
-from ..database import get_db_connection
+from database import get_db_connection
 
 sales_bp = Blueprint('sales', __name__)
 

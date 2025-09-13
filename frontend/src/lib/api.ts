@@ -41,13 +41,10 @@ export const productsApi = {
 export const salesApi = {
   getAll: () => apiRequest('/sales'),
   create: (sale: {
-    items: Array<{ product_id: number; quantity: number; price: number }>;
-    total_amount: number;
-    payment_method: string;
-    payment_status: string;
+    barcode: string;
+    name: string;
+    price: number;
   }) => apiRequest('/sales', { method: 'POST', body: JSON.stringify(sale) }),
-  recordSale: (sale: { barcode: string; name: string; price: number }) =>
-    apiRequest('/sales', { method: 'POST', body: JSON.stringify(sale) }),
   getForecast: () => apiRequest('/forecast'),
 };
 
@@ -56,11 +53,13 @@ export const receiptsApi = {
   getAll: () => apiRequest('/receipts'),
   getById: (receiptId: string) => apiRequest(`/receipts/${receiptId}`),
   create: (receipt: {
-    sale_id: number;
     items: Array<{ name: string; quantity: number; price: number; subtotal: number }>;
     total: number;
     payment_method: string;
     payment_status: string;
+    amount_paid: number;
+    customer_name: string;
+    customer_phone: string;
   }) => apiRequest('/receipts', { method: 'POST', body: JSON.stringify(receipt) }),
   delete: (receiptId: string) => apiRequest(`/receipts/${receiptId}`, { method: 'DELETE' }),
 };
