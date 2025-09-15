@@ -15,7 +15,7 @@ def create_receipt():
     """Create and store a new receipt"""
     data = request.get_json()
     
-    required_fields = ['items', 'total', 'payment_method', 'payment_status', 'amount_paid', 'customer_name', 'customer_phone']
+    required_fields = ['items', 'total', 'payment_method', 'payment_status', 'customer_name', 'customer_phone']
     if not all(key in data for key in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
     
@@ -29,7 +29,7 @@ def create_receipt():
         # Store receipt with customer info
         customer_name = data['customer_name']
         customer_phone = data['customer_phone']
-        amount_paid = float(data['amount_paid'])
+        amount_paid = float(data.get('amount_paid', data['total']))  # Default to total if not provided
         total_amount = float(data['total'])
         change_amount = max(0, amount_paid - total_amount)
 

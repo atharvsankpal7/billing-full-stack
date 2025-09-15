@@ -16,7 +16,6 @@ interface CheckoutForm {
   customerName: string;
   customerPhone: string;
   paymentMethod: 'cash' | 'card' | 'upi';
-  amountPaid: number;
 }
 
 export default function CheckoutPage() {
@@ -26,7 +25,6 @@ export default function CheckoutPage() {
     customerName: '',
     customerPhone: '',
     paymentMethod: 'cash',
-    amountPaid: 0,
   });
   const router = useRouter();
 
@@ -41,7 +39,6 @@ export default function CheckoutPage() {
   }, [router]);
 
   const totalAmount = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-  const change = formData.amountPaid - totalAmount;
 
   const handleInputChange = (field: keyof CheckoutForm, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -50,11 +47,6 @@ export default function CheckoutPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (formData.amountPaid < totalAmount) {
-      alert('Amount paid must be greater than or equal to total amount');
-      return;
-    }
-
     setLoading(true);
     
     try {
@@ -71,7 +63,7 @@ export default function CheckoutPage() {
         payment_status: 'COMPLETED',
         customer_name: formData.customerName,
         customer_phone: formData.customerPhone,
-        amount_paid: formData.amountPaid
+        amount_paid: totalAmount
       });
 
       // Clear cart
@@ -217,31 +209,6 @@ export default function CheckoutPage() {
                 </RadioGroup>
               </div>
 
-              <div>
-                <Label htmlFor="amountPaid">Amount Paid (₹)</Label>
-                <Input
-                  id="amountPaid"
-                  type="number"
-                  step="0.01"
-                  min={totalAmount}
-                  value={formData.amountPaid}
-                  onChange={(e) => handleInputChange('amountPaid', parseFloat(e.target.value) || 0)}
-                  required
-                  placeholder="Enter amount paid"
-                />
-              </div>
-
-              {formData.amountPaid > 0 && (
-                <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-md">
-                  <div className="flex justify-between">
-                    <span>Change:</span>
-                    <span className="font-semibold">
-                      ₹{change >= 0 ? change.toFixed(2) : '0.00'}
-                    </span>
-                  </div>
-                </div>
-              )}
-
               <div className="flex gap-4">
                 <Button
                   type="button"
@@ -253,7 +220,7 @@ export default function CheckoutPage() {
                 </Button>
                 <Button
                   type="submit"
-                  disabled={loading || formData.amountPaid < totalAmount}
+                  disabled={loading}
                   className="flex-1"
                 >
                   {loading ? 'Processing...' : 'Complete Checkout'}

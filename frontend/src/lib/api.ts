@@ -57,9 +57,9 @@ export const receiptsApi = {
     total: number;
     payment_method: string;
     payment_status: string;
-    amount_paid: number;
     customer_name: string;
     customer_phone: string;
+    amount_paid?: number;
   }) => apiRequest('/receipts', { method: 'POST', body: JSON.stringify(receipt) }),
   delete: (receiptId: string) => apiRequest(`/receipts/${receiptId}`, { method: 'DELETE' }),
 };
