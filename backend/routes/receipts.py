@@ -14,18 +14,40 @@ receipts_bp = Blueprint('receipts', __name__)
 def create_receipt():
     """Create and store a new receipt"""
     data = request.get_json()
-    
+
     required_fields = ['items', 'total', 'payment_method', 'payment_status', 'customer_name', 'customer_phone']
     if not all(key in data for key in required_fields):
         return jsonify({"error": "Missing required fields"}), 400
-    
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
+        # Validate stock availability for all items
+        for item in data['items']:
+            item_name = item['name']
+            item_quantity = int(item['quantity'])
+
+            # Find product by name to get barcode and current stock
+            cursor.execute("SELECT barcode, stock FROM products WHERE name = ?", (item_name,))
+            product = cursor.fetchone()
+
+            if not product:
+                conn.close()
+                return jsonify({"error": f"Product '{item_name}' not found"}), 404
+
+            current_stock = product['stock']
+
+            # Check if sufficient stock is available
+            if current_stock < item_quantity:
+                conn.close()
+                return jsonify({
+                    "error": f"Insufficient stock for '{item_name}'. Available: {current_stock}, Requested: {item_quantity}"
+                }), 400
+
         # Generate unique receipt ID
         receipt_id = str(uuid.uuid4())
-        
+
         # Store receipt with customer info
         customer_name = data['customer_name']
         customer_phone = data['customer_phone']
@@ -35,18 +57,33 @@ def create_receipt():
 
         cursor.execute(
             "INSERT INTO receipts (receipt_id, items, total_amount, payment_method, payment_status, customer_name, customer_phone, amount_paid, change_amount) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (receipt_id, json.dumps(data['items']), total_amount, 
+            (receipt_id, json.dumps(data['items']), total_amount,
              data['payment_method'], data['payment_status'], customer_name, customer_phone, amount_paid, change_amount)
         )
-        
+
+        # Deduct stock for each item
+        for item in data['items']:
+            item_name = item['name']
+            item_quantity = int(item['quantity'])
+
+            cursor.execute("SELECT barcode FROM products WHERE name = ?", (item_name,))
+            product = cursor.fetchone()
+            barcode = product['barcode']
+
+            # Reduce stock by the quantity purchased
+            cursor.execute(
+                "UPDATE products SET stock = stock - ? WHERE barcode = ?",
+                (item_quantity, barcode)
+            )
+
         conn.commit()
         conn.close()
-        
+
         return jsonify({
             "message": "Receipt created successfully",
             "receipt_id": receipt_id
         }), 201
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 

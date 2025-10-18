@@ -1,50 +1,30 @@
-"use client";
+'use client';
 
-import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Camera,
-  Scan,
-  ShoppingCart,
-  CreditCard,
-  IndianRupee,
-  X,
-} from "lucide-react";
+import { useState, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Camera, Scan, ShoppingCart, CreditCard, IndianRupee, X } from 'lucide-react';
 
-import { CameraScanner } from "@/components/camera-scanner";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { productsApi, salesApi, receiptsApi } from "@/lib/api";
-import type { Product, CartItem, PaymentResult } from "@/lib/types";
+import { CameraScanner } from '@/components/camera-scanner';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { productsApi, salesApi, receiptsApi } from '@/lib/api';
+import type { Product, CartItem, PaymentResult } from '@/lib/types';
+
+
 
 export default function BillingPage() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
   const [isCameraOpen, setIsCameraOpen] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
   // Load products from backend
   useEffect(() => {
-    const savedCart = localStorage.getItem("billingCart");
-    if (savedCart) setCart(JSON.parse(savedCart));
     fetchProducts();
   }, []);
 
@@ -54,41 +34,66 @@ export default function BillingPage() {
       const data = await productsApi.getAll();
       setProducts(data);
     } catch (error) {
-      console.error("Error fetching products:", error);
+      console.error('Error fetching products:', error);
+      // Fallback to mock data if API fails
+      setProducts([
+        { id: 1, name: 'Milk', price: 50, barcode: '8901234567890', stock: 20 },
+        { id: 2, name: 'Bread', price: 30, barcode: '8901234567891', stock: 15 },
+        { id: 3, name: 'Eggs', price: 60, barcode: '8901234567892', stock: 25 },
+        { id: 4, name: 'Butter', price: 45, barcode: '8901234567893', stock: 10 },
+        { id: 5, name: 'Cheese', price: 80, barcode: '8901234567894', stock: 8 }
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
   const addToCart = (product: Product) => {
-    setCart((prevCart) => {
-      const existingItem = prevCart.find(
-        (item) => item.barcode === product.barcode,
-      );
+    setCart(prevCart => {
+      const existingItem = prevCart.find(item => item.barcode === product.barcode);
       if (existingItem) {
-        return prevCart.map((item) =>
+        // Check if adding one more would exceed stock
+        if (existingItem.quantity >= product.stock) {
+          alert(`Cannot add more. Only ${product.stock} units available in stock.`);
+          return prevCart;
+        }
+        return prevCart.map(item =>
           item.barcode === product.barcode
             ? { ...item, quantity: item.quantity + 1 }
-            : item,
+            : item
         );
       } else {
+        // Check if product is out of stock
+        if (product.stock <= 0) {
+          alert(`${product.name} is out of stock.`);
+          return prevCart;
+        }
         return [...prevCart, { ...product, quantity: 1 }];
       }
     });
   };
 
   const removeFromCart = (barcode: string) => {
-    setCart((prevCart) => prevCart.filter((item) => item.barcode !== barcode));
+    setCart(prevCart => prevCart.filter(item => item.barcode !== barcode));
   };
 
   const updateQuantity = (barcode: string, quantity: number) => {
     if (quantity <= 0) {
       removeFromCart(barcode);
     } else {
-      setCart((prevCart) =>
-        prevCart.map((item) =>
-          item.barcode === barcode ? { ...item, quantity } : item,
-        ),
+      setCart(prevCart =>
+        prevCart.map(item => {
+          if (item.barcode === barcode) {
+            // Validate against available stock
+            const product = products.find(p => p.barcode === barcode);
+            if (product && quantity > product.stock) {
+              alert(`Cannot add ${quantity} units. Only ${product.stock} units available in stock.`);
+              return item;
+            }
+            return { ...item, quantity };
+          }
+          return item;
+        })
       );
     }
   };
@@ -97,28 +102,31 @@ export default function BillingPage() {
     return cart.reduce((total, item) => total + item.price * item.quantity, 0);
   };
 
-  const filteredProducts = products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.barcode.includes(searchTerm),
+  const filteredProducts = products.filter(product =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.barcode.includes(searchTerm)
   );
 
   const handleBarcodeScanned = (barcode: string) => {
-    const product = products.find((p) => p.barcode === barcode);
+    const product = products.find(p => p.barcode === barcode);
     if (product) addToCart(product);
   };
 
   const handleCheckout = () => {
     if (cart.length > 0) {
       // Save cart to localStorage for checkout page
-      localStorage.setItem("billingCart", JSON.stringify(cart));
-      window.location.href = "/checkout";
+      localStorage.setItem('billingCart', JSON.stringify(cart));
+      window.location.href = '/checkout';
     }
   };
+
+
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+
         {/* Products Section */}
         <div className="lg:col-span-2">
           <Card>
@@ -129,17 +137,12 @@ export default function BillingPage() {
                   <CardDescription>Scan or search for products</CardDescription>
                 </div>
                 <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setIsCameraOpen(true)}
-                  >
+                  <Button variant="outline" size="icon" onClick={() => setIsCameraOpen(true)}>
                     <Camera className="h-4 w-4" />
                   </Button>
                   <Button variant="outline" size="icon">
                     <Scan className="h-4 w-4" />
-                  </Button>{" "}
-                  <Button
+                  </Button>                  <Button
                     onClick={handleCheckout}
                     className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white"
                     disabled={cart.length === 0}
@@ -158,33 +161,59 @@ export default function BillingPage() {
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredProducts.map((product) => (
-                  <Card
-                    key={product.barcode}
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                  >
-                    <CardContent
-                      className="p-4"
-                      onClick={() => addToCart(product)}
+                {filteredProducts.map((product) => {
+                  const cartItem = cart.find(item => item.barcode === product.barcode);
+                  const cartQuantity = cartItem ? cartItem.quantity : 0;
+                  const isOutOfStock = product.stock <= 0;
+                  const isMaxedOut = cartQuantity >= product.stock;
+
+                  return (
+                    <Card
+                      key={product.barcode}
+                      className={`transition-shadow ${
+                        isOutOfStock || isMaxedOut
+                          ? 'opacity-50 cursor-not-allowed'
+                          : 'cursor-pointer hover:shadow-md'
+                      }`}
                     >
-                      <div className="text-center">
-                        <div className="font-semibold text-lg mb-2">
-                          {product.name}
+                      <CardContent
+                        className="p-4"
+                        onClick={() => {
+                          if (!isOutOfStock && !isMaxedOut) {
+                            addToCart(product);
+                          }
+                        }}
+                      >
+                        <div className="text-center">
+                          <div className="font-semibold text-lg mb-2">{product.name}</div>
+                          <Badge variant="secondary" className="mb-2">
+                            {product.barcode}
+                          </Badge>
+                          <div className="flex items-center justify-center gap-1 text-2xl font-bold text-green-600">
+                            <IndianRupee className="h-5 w-5" />
+                            {product.price}
+                          </div>
+                          <div className={`text-sm mt-2 ${
+                            isOutOfStock
+                              ? 'text-red-600 font-semibold'
+                              : product.stock < 10
+                              ? 'text-orange-600'
+                              : 'text-gray-500'
+                          }`}>
+                            {isOutOfStock
+                              ? 'Out of Stock'
+                              : `Stock: ${product.stock}`}
+                          </div>
+                          {isMaxedOut && !isOutOfStock && (
+                            <div className="text-xs text-orange-600 mt-1">
+                              Max quantity in cart
+                            </div>
+                          )}
                         </div>
-                        <Badge variant="secondary" className="mb-2">
-                          {product.barcode}
-                        </Badge>
-                        <div className="flex items-center justify-center gap-1 text-2xl font-bold text-green-600">
-                          <IndianRupee className="h-5 w-5" />
-                          {product.price}
-                        </div>
-                        <div className="text-sm text-gray-500 mt-2">
-                          Stock: {product.stock}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
@@ -221,20 +250,13 @@ export default function BillingPage() {
                     <TableBody>
                       {cart.map((item) => (
                         <TableRow key={item.barcode}>
-                          <TableCell className="font-medium">
-                            {item.name}
-                          </TableCell>
+                          <TableCell className="font-medium">{item.name}</TableCell>
                           <TableCell>
                             <Input
                               type="number"
                               min="1"
                               value={item.quantity}
-                              onChange={(e) =>
-                                updateQuantity(
-                                  item.barcode,
-                                  parseInt(e.target.value),
-                                )
-                              }
+                              onChange={(e) => updateQuantity(item.barcode, parseInt(e.target.value))}
                               className="w-16 h-8"
                             />
                           </TableCell>
@@ -270,11 +292,7 @@ export default function BillingPage() {
                       </span>
                     </div>
 
-                    <Button
-                      className="w-full mt-4"
-                      size="lg"
-                      onClick={handleCheckout}
-                    >
+                    <Button className="w-full mt-4" size="lg" onClick={handleCheckout}>
                       <CreditCard className="h-5 w-5 mr-2" />
                       Checkout
                     </Button>
@@ -292,6 +310,9 @@ export default function BillingPage() {
         onClose={() => setIsCameraOpen(false)}
         onBarcodeScanned={handleBarcodeScanned}
       />
+
+
+
     </div>
   );
 }

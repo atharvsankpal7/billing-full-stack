@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { IndianRupee, CreditCard, Wallet, Landmark } from 'lucide-react';
-import { salesApi, receiptsApi } from '@/lib/api';
+import { salesApi, receiptsApi, productsApi } from '@/lib/api';
 import type { CartItem } from '@/lib/types';
 
 interface CheckoutForm {
@@ -46,10 +46,34 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     setLoading(true);
-    
+
     try {
+      // Fetch current products to validate stock
+      const currentProducts = await productsApi.getAll();
+
+      // Validate stock for each item in cart
+      for (const cartItem of cart) {
+        const product = currentProducts.find(
+          (p: { barcode: string }) => p.barcode === cartItem.barcode
+        );
+
+        if (!product) {
+          alert(`Product '${cartItem.name}' no longer exists.`);
+          setLoading(false);
+          return;
+        }
+
+        if (product.stock < cartItem.quantity) {
+          alert(
+            `Insufficient stock for '${cartItem.name}'. Available: ${product.stock}, In cart: ${cartItem.quantity}`
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       // Create receipt
       await receiptsApi.create({
         items: cart.map(item => ({
@@ -68,12 +92,13 @@ export default function CheckoutPage() {
 
       // Clear cart
       localStorage.removeItem('billingCart');
-      
+
       alert('Checkout completed successfully!');
       router.push('/previous-checkouts');
     } catch (error) {
       console.error('Error during checkout:', error);
-      alert('Error during checkout. Please try again.');
+      const errorMessage = error instanceof Error ? error.message : 'Error during checkout. Please try again.';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }

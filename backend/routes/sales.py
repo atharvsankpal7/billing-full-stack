@@ -11,31 +11,51 @@ sales_bp = Blueprint('sales', __name__)
 def record_sale():
     """Record a sale transaction"""
     data = request.get_json()
-    
+
     if not all(key in data for key in ['barcode', 'name', 'price']):
         return jsonify({"error": "Missing required fields"}), 400
-    
+
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
+        # Get quantity (default to 1 if not provided)
+        quantity = int(data.get('quantity', 1))
+
+        # Check current stock
+        cursor.execute("SELECT stock FROM products WHERE barcode = ?", (data['barcode'],))
+        product = cursor.fetchone()
+
+        if not product:
+            conn.close()
+            return jsonify({"error": "Product not found"}), 404
+
+        current_stock = product['stock']
+
+        # Validate stock availability
+        if current_stock < quantity:
+            conn.close()
+            return jsonify({
+                "error": f"Insufficient stock. Available: {current_stock}, Requested: {quantity}"
+            }), 400
+
         # Record the sale
         cursor.execute(
             "INSERT INTO sales (barcode, name, price) VALUES (?, ?, ?)",
             (data['barcode'], data['name'], float(data['price']))
         )
-        
-        # Update product stock
+
+        # Update product stock by quantity
         cursor.execute(
-            "UPDATE products SET stock = stock - 1 WHERE barcode = ? AND stock > 0",
-            (data['barcode'],)
+            "UPDATE products SET stock = stock - ? WHERE barcode = ?",
+            (quantity, data['barcode'])
         )
-        
+
         conn.commit()
         conn.close()
-        
+
         return jsonify({"message": "Sale recorded successfully"}), 201
-    
+
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
