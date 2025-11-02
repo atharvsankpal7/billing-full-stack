@@ -1,22 +1,25 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 // Generic API request function
 async function apiRequest(endpoint: string, options: RequestInit = {}) {
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const defaultOptions: RequestInit = {
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     },
   };
 
   try {
     const response = await fetch(url, { ...defaultOptions, ...options });
-    
+
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(
+        errorData.error || `HTTP error! status: ${response.status}`,
+      );
     }
 
     return await response.json();
@@ -28,50 +31,98 @@ async function apiRequest(endpoint: string, options: RequestInit = {}) {
 
 // Products API
 export const productsApi = {
-  getAll: () => apiRequest('/products'),
+  getAll: () => apiRequest("/products"),
   getByBarcode: (barcode: string) => apiRequest(`/products/${barcode}`),
-  create: (product: { barcode: string; name: string; price: number; stock: number }) =>
-    apiRequest('/products', { method: 'POST', body: JSON.stringify(product) }),
-  update: (barcode: string, updates: Partial<{ name: string; price: number; stock: number }>) =>
-    apiRequest(`/products/${barcode}`, { method: 'PUT', body: JSON.stringify(updates) }),
-  delete: (barcode: string) => apiRequest(`/products/${barcode}`, { method: 'DELETE' }),
+  create: (product: {
+    barcode: string;
+    name: string;
+    price: number;
+    stock: number;
+  }) =>
+    apiRequest("/products", { method: "POST", body: JSON.stringify(product) }),
+  update: (
+    barcode: string,
+    updates: Partial<{ name: string; price: number; stock: number }>,
+  ) =>
+    apiRequest(`/products/${barcode}`, {
+      method: "PUT",
+      body: JSON.stringify(updates),
+    }),
+  delete: (barcode: string) =>
+    apiRequest(`/products/${barcode}`, { method: "DELETE" }),
 };
 
 // Sales API
 export const salesApi = {
-  getAll: () => apiRequest('/sales'),
-  create: (sale: {
-    barcode: string;
-    name: string;
-    price: number;
-  }) => apiRequest('/sales', { method: 'POST', body: JSON.stringify(sale) }),
-  getForecast: () => apiRequest('/forecast'),
+  getAll: () => apiRequest("/sales"),
+  create: (sale: { barcode: string; name: string; price: number }) =>
+    apiRequest("/sales", { method: "POST", body: JSON.stringify(sale) }),
+  getForecast: () => apiRequest("/forecast"),
 };
 
 // Receipts API
 export const receiptsApi = {
-  getAll: () => apiRequest('/receipts'),
+  getAll: () => apiRequest("/receipts"),
   getById: (receiptId: string) => apiRequest(`/receipts/${receiptId}`),
   create: (receipt: {
-    items: Array<{ name: string; quantity: number; price: number; subtotal: number }>;
+    items: Array<{
+      name: string;
+      quantity: number;
+      price: number;
+      subtotal: number;
+    }>;
     total: number;
     payment_method: string;
     payment_status: string;
     customer_name: string;
     customer_phone: string;
     amount_paid?: number;
-  }) => apiRequest('/receipts', { method: 'POST', body: JSON.stringify(receipt) }),
-  delete: (receiptId: string) => apiRequest(`/receipts/${receiptId}`, { method: 'DELETE' }),
+  }) =>
+    apiRequest("/receipts", { method: "POST", body: JSON.stringify(receipt) }),
+  delete: (receiptId: string) =>
+    apiRequest(`/receipts/${receiptId}`, { method: "DELETE" }),
 };
 
 // Barcode API
 export const barcodeApi = {
   scanFromImage: (imageData: string) =>
-    apiRequest('/barcode/scan', { 
-      method: 'POST', 
-      body: JSON.stringify({ image: imageData }) 
+    apiRequest("/barcode/scan", {
+      method: "POST",
+      body: JSON.stringify({ image: imageData }),
     }),
-  validateBarcode: (barcode: string) => apiRequest(`/barcode/validate/${barcode}`),
+  validateBarcode: (barcode: string) =>
+    apiRequest(`/barcode/validate/${barcode}`),
+};
+
+// ML Demand Forecasting API (via Backend)
+export const mlApi = {
+  // Get model information
+  getModelInfo: () => apiRequest("/ml/model/info"),
+
+  // Single prediction for a product by barcode
+  predict: (
+    barcode: string,
+    input?: {
+      store_name?: string;
+      quantity?: number;
+      discount_amount?: number;
+      final_amount?: number;
+    },
+  ) =>
+    apiRequest(`/ml/predict/${barcode}`, {
+      method: "POST",
+      body: JSON.stringify(input || {}),
+    }),
+
+  // Batch prediction for multiple products
+  predictBatch: (barcodes: string[], store_name?: string) =>
+    apiRequest("/ml/predict/batch", {
+      method: "POST",
+      body: JSON.stringify({ barcodes, store_name }),
+    }),
+
+  // Health check
+  healthCheck: () => apiRequest("/ml/health"),
 };
 
 // Types
